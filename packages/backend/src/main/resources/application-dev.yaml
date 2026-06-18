@@ -9,6 +9,10 @@ spring:
       hibernate:
         format_sql: true
 
+app:
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003
+
 logging:
   level:
     com.example.attendance: DEBUG
