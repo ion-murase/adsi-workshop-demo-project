@@ -1,0 +1,115 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deploy environment"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-1
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Backend test
+        working-directory: packages/backend
+        run: ./gradlew check
+
+      - name: Frontend install & test
+        working-directory: packages/frontend
+        run: |
+          npm ci
+          npm test -- --run
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr-login
+
+      - name: Build & push backend image
+        working-directory: packages/backend
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          ECR_REPOSITORY: attendance-backend-${{ inputs.environment || 'dev' }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY --all-tags
+
+      - name: Build frontend
+        working-directory: packages/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: CDK deploy
+        working-directory: packages/infra
+        run: |
+          npm ci
+          npx cdk deploy --context env=${{ inputs.environment || 'dev' }} --require-approval never
+
+      - name: Sync frontend to S3
+        env:
+          ENV_NAME: ${{ inputs.environment || 'dev' }}
+        run: |
+          BUCKET_NAME=$(aws cloudformation describe-stacks \
+            --stack-name Attendance-$ENV_NAME \
+            --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" \
+            --output text)
+          aws s3 sync packages/frontend/out/ s3://$BUCKET_NAME/ --delete
+
+      - name: Invalidate CloudFront cache
+        env:
+          ENV_NAME: ${{ inputs.environment || 'dev' }}
+        run: |
+          DIST_ID=$(aws cloudformation describe-stacks \
+            --stack-name Attendance-$ENV_NAME \
+            --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" \
+            --output text)
+          if [ -n "$DIST_ID" ]; then
+            aws cloudfront create-invalidation --distribution-id $DIST_ID --paths "/*"
+          fi
