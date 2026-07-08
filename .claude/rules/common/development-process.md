@@ -1,19 +1,48 @@
 ---
 description: AI 駆動 + TDD の開発プロセス。新機能の実装やタスクの進め方に関わるときに適用する。
-globs: packages/**/*.{java,ts,tsx}
 ---
 
 # 開発プロセス
 
-AI-DLC (AWS) のフローをベースに、TDD を組み合わせた開発プロセス。
+AWS の **AI-DLC（AI-Driven Development Life Cycle）** をベースに、TDD を組み合わせた開発プロセス。
+
+## AI-DLC の考え方
+
+- **Inception → Construction → Operation** の 3 フェーズを反復で回す
+- 各ステップで **次工程用の「リッチなコンテキスト」を積み上げる**（要求 → 設計 → 実装 と成果物が次の AI 入力になる）
+- AI が生成し、**人間はゲートで承認・検証する**（Plan → 承認 → 実装）
+- 実装で判明した齟齬は要求・設計へ戻す（一方通行ではない）
+
+| フェーズ | 主なステップ | このプロジェクトの工程 | スキル |
+|---------|------------|----------------------|--------|
+| Inception | ユーザーストーリー詳述 | 要求仕様 | `requirements` |
+| Inception | 作業単位に計画 | 作業分割（UoW） | `work-decomposition` |
+| Construction | ドメイン/コンポーネントモデル | 設計 | `design` |
+| Construction | コードとテスト生成 | TDD 実装 | `tdd-implementation` |
+| （検証・レビュー） | — | 検証 / レビュー | `verify` / `multi-agent-review` |
+| Operation | 本番デプロイ・運用 | （本ワークショップ範囲外） | — |
+
+## ズームレベル（再帰）
+
+「要求 → 設計 →（分割）→ 実装」の型を、**スコープに応じたズームレベルで繰り返す**。
+各フェーズの重さはスコープに比例し、小さいものは省略される。
+
+```
+プロダクト / 大機能:  要求(フル) → 設計(フル) → UoW/domain 分割
+                        └ 各 Unit:  要求(軽) → 設計(軽) → TDD 実装
+小修正:               要求・設計はほぼスキップ → TDD 実装
+```
+
+- 「分割」は主に上位レベルの工程。末端 Unit は再分割せず設計 → 実装へ直行する。
+- 実務上は 2〜3 段（プロダクト → Unit）に落ち着く。
 
 ## フロー
 
 ```
-1. 要件定義（Inception）
-2. 基本設計（AI と壁打ち）
-3. Unit of Work 分割
-4. 各 Unit を Plan → 承認 → TDD で実装（Construction）
+1. 要件定義（Inception）        → requirements スキル
+2. 基本設計（AI と壁打ち）       → design スキル
+3. Unit of Work 分割           → work-decomposition スキル
+4. 各 Unit を Plan → 承認 → TDD → tdd-implementation スキル（Construction）
 ```
 
 ## 1. 要件定義（Inception）

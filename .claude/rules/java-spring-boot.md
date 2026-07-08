@@ -1,7 +1,9 @@
 ---
 description: Java / Spring Boot のコーディング規約。backend の Java ファイルを編集するときに適用する。
-globs: packages/backend/**/*.java
 ---
+
+> [common/coding-style.md](./common/coding-style.md) を拡張する。競合時は本ファイルが優先。
+
 
 # Java / Spring Boot コーディング規約
 
@@ -71,3 +73,37 @@ public class EmployeeServiceImpl implements EmployeeService {
 - ログレベルの使い分け: ERROR=障害, WARN=想定外だが継続可能, INFO=業務イベント, DEBUG=開発用
 - 例外ログには必ずスタックトレースを含める: `log.error("message", exception)`
 - 個人情報・パスワード等の機密情報をログに出力しない
+
+## Spring Boot 4.x 互換
+
+### Security
+
+- `WebSecurityConfigurerAdapter` 禁止 → `SecurityFilterChain` Bean のみ
+- `antMatchers()` 禁止 → `requestMatchers()`
+- `authorizeRequests()` 禁止 → `authorizeHttpRequests()`
+
+### テスト
+
+- `@MockBean` 禁止 → `@MockitoBean`
+- `@SpyBean` 禁止 → `@MockitoSpyBean`
+- `@SpringBootTest` + MockMvc には `@AutoConfigureMockMvc` を明示
+
+### Jackson / Nullable
+
+- カスタム Serializer/Deserializer は極力避ける（Jackson 3 移行を意識）
+- `org.springframework.lang.Nullable` 禁止 → `org.jspecify.annotations.Nullable`
+
+## DTO / Entity / Lombok
+
+- DTO・リクエスト/レスポンス: `record`（Lombok `@Data` 禁止）
+- Entity: `@Data`, `@Builder`, `@NoArgsConstructor`, `@AllArgsConstructor` 可
+- `@Slf4j`: どこでも可
+- MapStruct 禁止 — record コンストラクタで手動マッピング
+
+## アーキテクチャ
+
+- ドメイン分割レイヤード
+- Service は interface + impl
+- `@Version` 楽観ロック標準
+- `ddl-auto` 禁止 — Flyway で管理
+

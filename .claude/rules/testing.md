@@ -1,7 +1,9 @@
 ---
 description: テストのルール。テストコードを書く・修正するときに適用する。
-globs: packages/**/*{Test,test,spec}*.{java,ts,tsx}
 ---
+
+> [common/code-review.md](./common/code-review.md) のカバレッジ要件と整合させる。
+
 
 # テストルール
 

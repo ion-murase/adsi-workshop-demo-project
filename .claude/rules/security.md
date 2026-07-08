@@ -1,7 +1,9 @@
 ---
 description: セキュリティルール。認証・認可・入力処理・シークレット管理に関わるコードを書くときに適用する。
-globs: packages/**/*.{java,ts,tsx,yaml,yml}
 ---
+
+> [common/coding-style.md](./common/coding-style.md) の入力バリデーション原則を具体化する。
+
 
 # セキュリティルール
 

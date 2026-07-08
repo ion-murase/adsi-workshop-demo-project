@@ -1,7 +1,9 @@
 ---
 description: TypeScript / Next.js のコーディング規約。frontend の TS/TSX ファイルを編集するときに適用する。
-globs: packages/frontend/**/*.{ts,tsx}
 ---
+
+> [common/coding-style.md](./common/coding-style.md) を拡張する。競合時は本ファイルが優先。
+
 
 # TypeScript / Next.js コーディング規約
 
@@ -41,6 +43,16 @@ globs: packages/frontend/**/*.{ts,tsx}
 - Tailwind CSS を使う
 - デザイントークン（色・フォント・spacing 等）は CSS カスタムプロパティで定義する
 - アニメーションは `transform`, `opacity` のみ使う（レイアウトプロパティを避ける）
+
+
+## SageMaker / basePath
+
+SageMaker Code Editor プレビュー（`SAGEMAKER=1`）では basePath が付く。
+
+- クライアント側の **すべての fetch** に `withBasePath()` を使う（`@/lib/api-client`）
+- `fetch("/api/...")` の絶対パスは basePath を付与しないため API が全滅する
+- CSV/PDF 等の直接 fetch も `withBasePath` 対応必須
+- 詳細: `.claude/skills/sagemaker-code-editor/SKILL.md`
 
 ## 命名規則
 
