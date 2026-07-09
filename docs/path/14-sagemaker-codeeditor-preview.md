@@ -3,7 +3,7 @@
 ## プロンプト
 
 > npm run dev:sagemaker を実行して、 port:3000 に紐づいたこれにアクセスしても Unsupported URL Path になる
-> https://<studio-domain>.studio.ap-northeast-1.sagemaker.aws/ports/3000/ports/3000
+> https://&lt;studio-domain&gt;.studio.ap-northeast-1.sagemaker.aws/ports/3000/ports/3000
 
 ## 背景
 
