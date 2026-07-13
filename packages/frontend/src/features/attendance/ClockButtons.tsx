@@ -65,7 +65,7 @@ export function ClockButtons() {
   }
 
   const status = todayStatus?.status ?? "NOT_CLOCKED_IN";
-  const canClockIn = status === "NOT_CLOCKED_IN";
+  const canClockIn = status !== "CLOCKED_IN";
   const canClockOut = status === "CLOCKED_IN";
   const isPending = clockInMutation.isPending || clockOutMutation.isPending;
 
