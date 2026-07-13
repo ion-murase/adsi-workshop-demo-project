@@ -4,6 +4,7 @@ import { LogIn, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTime } from "./format";
+import { MemoInput } from "./MemoInput";
 import { useClockIn, useClockOut, useTodayStatus } from "./useAttendance";
 
 function CurrentTime() {
@@ -48,6 +49,7 @@ export function ClockButtons() {
   const { data: todayStatus, isLoading } = useTodayStatus();
   const clockInMutation = useClockIn();
   const clockOutMutation = useClockOut();
+  const [memo, setMemo] = useState("");
 
   if (isLoading) {
     return (
@@ -63,7 +65,7 @@ export function ClockButtons() {
   }
 
   const status = todayStatus?.status ?? "NOT_CLOCKED_IN";
-  const canClockIn = status === "NOT_CLOCKED_IN";
+  const canClockIn = status !== "CLOCKED_IN";
   const canClockOut = status === "CLOCKED_IN";
   const isPending = clockInMutation.isPending || clockOutMutation.isPending;
 
@@ -80,11 +82,19 @@ export function ClockButtons() {
           </span>
         )}
       </div>
+      {canClockIn && (
+        <div className="max-w-md mx-auto">
+          <MemoInput value={memo} onChange={setMemo} disabled={isPending} />
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
         <button
           type="button"
           disabled={!canClockIn || isPending}
-          onClick={() => clockInMutation.mutate()}
+          onClick={() => {
+            clockInMutation.mutate(memo || undefined);
+            setMemo("");
+          }}
           className="flex flex-col items-center justify-center gap-2 rounded-xl bg-lime-500 py-8 text-white transition-colors hover:bg-lime-600 active:bg-lime-700 disabled:bg-gray-200 disabled:text-gray-400"
         >
           <LogIn className="h-8 w-8" />

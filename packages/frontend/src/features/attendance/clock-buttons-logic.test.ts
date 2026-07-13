@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 type AttendanceStatus = "NOT_CLOCKED_IN" | "CLOCKED_IN" | "CLOCKED_OUT";
 
 function canClockIn(status: AttendanceStatus): boolean {
-  return status === "NOT_CLOCKED_IN";
+  return status !== "CLOCKED_IN";
 }
 
 function canClockOut(status: AttendanceStatus): boolean {
@@ -20,8 +20,8 @@ describe("打刻ボタン活性制御", () => {
       expect(canClockIn("CLOCKED_IN")).toBe(false);
     });
 
-    it("CLOCKED_OUT → 出勤不可", () => {
-      expect(canClockIn("CLOCKED_OUT")).toBe(false);
+    it("CLOCKED_OUT → 再出勤可能", () => {
+      expect(canClockIn("CLOCKED_OUT")).toBe(true);
     });
   });
 

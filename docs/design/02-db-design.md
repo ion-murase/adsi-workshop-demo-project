@@ -92,6 +92,7 @@ CREATE INDEX idx_employees_role ON employees(role);
 | work_date | date | NOT NULL | 勤務日 |
 | clock_in | timestamp with time zone | NOT NULL | 出勤時刻 |
 | clock_out | timestamp with time zone | | 退勤時刻（null = 出勤中） |
+| memo | varchar(300) | | 打刻メモ（備考）。遅刻理由・在宅勤務等 |
 | corrected | boolean | NOT NULL, DEFAULT false | 修正済みフラグ |
 | version | bigint | NOT NULL, DEFAULT 0 | 楽観ロック |
 | created_at | timestamp with time zone | NOT NULL | 作成日時 |
@@ -104,6 +105,7 @@ CREATE TABLE attendance_records (
     work_date DATE NOT NULL,
     clock_in TIMESTAMP WITH TIME ZONE NOT NULL,
     clock_out TIMESTAMP WITH TIME ZONE,
+    memo VARCHAR(300),
     corrected BOOLEAN NOT NULL DEFAULT false,
     version BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -116,6 +118,7 @@ CREATE INDEX idx_attendance_records_employee_date ON attendance_records(employee
 備考:
 - 同一 `employee_id` + `work_date` に複数行が存在可能（同日複数回打刻）
 - ユニーク制約は付けない
+- `memo` は任意入力（NULL 許容）、最大 300 文字
 
 ---
 
@@ -190,11 +193,12 @@ CREATE INDEX idx_attendance_corrections_status ON attendance_corrections(status)
      │ work_date                   │   │ requester_id (FK → employees)        │
      │ clock_in                    │   │ approver_id (FK → employees)         │
      │ clock_out                   │0..1│ target_date                          │
-     │ corrected                   │◄──│ corrected_clock_in                   │
-     │ version                     │ N │ corrected_clock_out                  │
-     │ created_at                  │   │ reason                               │
-     │ updated_at                  │   │ status                               │
-     └─────────────────────────────┘   │ version                              │
+     │ memo                        │◄──│ corrected_clock_in                   │
+     │ corrected                   │ N │ corrected_clock_out                  │
+     │ version                     │   │ reason                               │
+     │ created_at                  │   │ status                               │
+     │ updated_at                  │   │ version                              │
+     └─────────────────────────────┘   │ created_at                           │
                                        │ created_at                           │
                                        │ updated_at                           │
                                        └──────────────────────────────────────┘
@@ -233,6 +237,7 @@ CREATE INDEX idx_attendance_corrections_status ON attendance_corrections(status)
 | `V2__create_employees.sql` | employees テーブル + インデックス |
 | `V3__create_attendance_records.sql` | attendance_records テーブル + インデックス |
 | `V4__create_attendance_corrections.sql` | attendance_corrections テーブル + インデックス |
+| `V5__add_memo_to_attendance_records.sql` | attendance_records に memo カラム追加 |
 
 ### 初期データ（dev / test のみ）
 

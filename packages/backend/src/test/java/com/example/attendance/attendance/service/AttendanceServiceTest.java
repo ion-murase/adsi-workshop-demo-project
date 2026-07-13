@@ -85,7 +85,7 @@ class AttendanceServiceTest {
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
             // Act
-            var result = service.clockIn(employee.getId());
+            var result = service.clockIn(employee.getId(), (String) null);
 
             // Assert
             assertThat(result.workDate()).isEqualTo(TODAY_TOKYO);
@@ -112,7 +112,7 @@ class AttendanceServiceTest {
                     .thenReturn(Optional.of(existingRecord));
 
             // Act & Assert
-            assertThatThrownBy(() -> service.clockIn(employee.getId()))
+            assertThatThrownBy(() -> service.clockIn(employee.getId(), (String) null))
                     .isInstanceOf(ResponseStatusException.class)
                     .hasMessageContaining("Already clocked in");
         }

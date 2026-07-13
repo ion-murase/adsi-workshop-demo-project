@@ -9,6 +9,7 @@ import {
   fetchHistory,
   fetchTeamAttendance,
   fetchTodayStatus,
+  updateMemo,
 } from "./attendance-api";
 
 const TODAY_STATUS_KEY = ["attendance", "today"] as const;
@@ -32,7 +33,7 @@ export function useClockIn() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => clockIn(user!.id),
+    mutationFn: (memo: string | undefined) => clockIn(user!.id, memo),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TODAY_STATUS_KEY });
       toast.success("出勤を記録しました");
@@ -61,6 +62,19 @@ export function useAttendanceHistory(month: string) {
     queryKey: [...HISTORY_KEY, employeeId, month],
     queryFn: () => fetchHistory(employeeId!, month),
     enabled: !!employeeId && !!month,
+  });
+}
+
+export function useUpdateMemo() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ recordId, memo }: { recordId: string; memo: string }) =>
+      updateMemo(recordId, memo),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TODAY_STATUS_KEY });
+      toast.success("メモを保存しました");
+    },
   });
 }
 

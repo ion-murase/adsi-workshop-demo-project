@@ -269,6 +269,7 @@ Error (409): 同部署に既に上長がいる
 |---------|------|------|------|
 | POST | `/api/attendance/clock-in` | 出勤打刻 | 全ロール |
 | POST | `/api/attendance/clock-out` | 退勤打刻 | 全ロール |
+| PUT | `/api/attendance/memo` | 打刻メモ更新 | 全ロール |
 | GET | `/api/attendance/today` | 当日の打刻状態 | 全ロール |
 | GET | `/api/attendance/history` | 自分の勤怠履歴 | 全ロール |
 | GET | `/api/attendance/team` | 自部署メンバーの勤怠 | 上長 |
@@ -276,9 +277,16 @@ Error (409): 同部署に既に上長がいる
 
 ### POST /api/attendance/clock-in
 
-出勤打刻。サーバー時刻で記録する。
+出勤打刻。サーバー時刻で記録する。メモは任意で同時送信可能。
 
-Request: ボディなし
+Request:
+```json
+{
+  "memo": "在宅勤務"
+}
+```
+
+- `memo` は任意（null または省略可）。最大 300 文字。
 
 Response (201):
 ```json
@@ -287,6 +295,7 @@ Response (201):
   "workDate": "2026-06-16",
   "clockIn": "2026-06-16T00:00:00Z",
   "clockOut": null,
+  "memo": "在宅勤務",
   "corrected": false
 }
 ```
@@ -306,11 +315,42 @@ Response (200):
   "workDate": "2026-06-16",
   "clockIn": "2026-06-16T00:00:00Z",
   "clockOut": "2026-06-16T09:00:00Z",
+  "memo": "在宅勤務",
   "corrected": false
 }
 ```
 
 Error (409): 出勤中のレコードがない（ATT-05）
+
+### PUT /api/attendance/memo
+
+打刻メモを更新する。当日（workDate ベース）のレコードのみ編集可能。
+
+Request:
+```json
+{
+  "attendanceRecordId": "019059b1-...",
+  "memo": "遅刻: 電車遅延のため"
+}
+```
+
+- `attendanceRecordId` (必須): 対象の打刻レコード ID
+- `memo` (必須): メモ内容。空文字でクリア。最大 300 文字
+
+Response (200):
+```json
+{
+  "id": "019059b1-...",
+  "workDate": "2026-06-16",
+  "clockIn": "2026-06-16T00:00:00Z",
+  "clockOut": null,
+  "memo": "遅刻: 電車遅延のため",
+  "corrected": false
+}
+```
+
+Error (400): 当日以外のレコードを編集しようとした / メモが 300 文字超過
+Error (404): 指定されたレコードが見つからない / 自分のレコードではない
 
 ### GET /api/attendance/today
 
@@ -325,6 +365,7 @@ Response (200):
       "id": "019059b1-...",
       "clockIn": "2026-06-16T00:00:00Z",
       "clockOut": null,
+      "memo": "在宅勤務",
       "corrected": false
     }
   ]
@@ -355,6 +396,7 @@ Response (200):
           "id": "019059b1-...",
           "clockIn": "2026-06-16T00:00:00Z",
           "clockOut": "2026-06-16T09:00:00Z",
+          "memo": null,
           "corrected": false
         }
       ],
@@ -636,6 +678,7 @@ Logback + Logstash Logback Encoder で JSON 形式のログを出力する。AI 
 | PATCH /api/employees/{id}/manager | - | - | - | o |
 | POST /api/attendance/clock-in | - | o | o | o |
 | POST /api/attendance/clock-out | - | o | o | o |
+| PUT /api/attendance/memo | - | o | o | o |
 | GET /api/attendance/today | - | o | o | o |
 | GET /api/attendance/history | - | o | o | o |
 | GET /api/attendance/team | - | - | o | - |

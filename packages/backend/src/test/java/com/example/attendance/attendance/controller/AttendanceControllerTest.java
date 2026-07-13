@@ -23,16 +23,22 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.example.attendance.common.config.security.EmployeeUserDetails;
+import com.example.attendance.employee.entity.Role;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.http.MediaType;
 
 @WebMvcTest(
     controllers = AttendanceController.class,
@@ -73,9 +79,10 @@ class AttendanceControllerTest {
                 LocalDate.of(2025, 1, 15),
                 Instant.parse("2025-01-15T00:00:00Z"),
                 null,
-                false
+                false,
+                null
         );
-        when(attendanceService.clockIn(EMPLOYEE_ID)).thenReturn(response);
+        when(attendanceService.clockIn(EMPLOYEE_ID, null)).thenReturn(response);
 
         // Act & Assert
         mockMvc.perform(post("/api/attendance/clock-in")
@@ -94,7 +101,8 @@ class AttendanceControllerTest {
                 LocalDate.of(2025, 1, 15),
                 Instant.parse("2025-01-14T23:00:00Z"),
                 Instant.parse("2025-01-15T08:00:00Z"),
-                false
+                false,
+                null
         );
         when(attendanceService.clockOut(EMPLOYEE_ID)).thenReturn(response);
 
@@ -121,6 +129,82 @@ class AttendanceControllerTest {
     }
 
     @Test
+    @DisplayName("POST /api/attendance/clock-in メモ付きは201を返しmemoが含まれる")
+    void clockIn_withMemo_returns201WithMemo() throws Exception {
+        // Arrange
+        var response = new AttendanceRecordResponse(
+                UUID.randomUUID(),
+                LocalDate.of(2025, 1, 15),
+                Instant.parse("2025-01-15T00:00:00Z"),
+                null,
+                false,
+                "在宅勤務"
+        );
+        when(attendanceService.clockIn(EMPLOYEE_ID, "在宅勤務")).thenReturn(response);
+
+        // Act & Assert
+        mockMvc.perform(post("/api/attendance/clock-in")
+                        .param("employeeId", EMPLOYEE_ID.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"memo\":\"在宅勤務\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.memo").value("在宅勤務"));
+    }
+
+    @Test
+    @DisplayName("PUT /api/attendance/memo は200を返す")
+    void updateMemo_validRequest_returns200() throws Exception {
+        // Arrange
+        var recordId = UUID.randomUUID();
+        var response = new AttendanceRecordResponse(
+                recordId,
+                LocalDate.of(2025, 1, 15),
+                Instant.parse("2025-01-15T00:00:00Z"),
+                null,
+                false,
+                "遅刻：電車遅延"
+        );
+        when(attendanceService.updateMemo(recordId, EMPLOYEE_ID, "遅刻：電車遅延")).thenReturn(response);
+
+        // Act & Assert
+        mockMvc.perform(put("/api/attendance/memo")
+                        .with(user(createEmployeeUserDetails()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"attendanceRecordId\":\"" + recordId + "\",\"memo\":\"遅刻：電車遅延\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.memo").value("遅刻：電車遅延"));
+    }
+
+    @Test
+    @DisplayName("POST /api/attendance/clock-in 301文字メモは400を返す")
+    void clockIn_memoExceeds300Chars_returns400() throws Exception {
+        // Arrange
+        var longMemo = "あ".repeat(301);
+
+        // Act & Assert
+        mockMvc.perform(post("/api/attendance/clock-in")
+                        .param("employeeId", EMPLOYEE_ID.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"memo\":\"" + longMemo + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PUT /api/attendance/memo 301文字メモは400を返す")
+    void updateMemo_memoExceeds300Chars_returns400() throws Exception {
+        // Arrange
+        var recordId = UUID.randomUUID();
+        var longMemo = "あ".repeat(301);
+
+        // Act & Assert
+        mockMvc.perform(put("/api/attendance/memo")
+                        .with(user(createEmployeeUserDetails()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"attendanceRecordId\":\"" + recordId + "\",\"memo\":\"" + longMemo + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("GET /api/attendance/history は200を返す")
     void getHistory_validRequest_returns200() throws Exception {
         // Arrange
@@ -144,5 +228,23 @@ class AttendanceControllerTest {
                 .andExpect(jsonPath("$.month").value("2025-01"))
                 .andExpect(jsonPath("$.days").isArray())
                 .andExpect(jsonPath("$.summary.workDays").value(1));
+    }
+
+    private EmployeeUserDetails createEmployeeUserDetails() {
+        var info = new EmployeeUserDetails.EmployeeInfo(
+                EMPLOYEE_ID,
+                "テスト社員",
+                UUID.randomUUID(),
+                "テスト部",
+                Role.EMPLOYEE,
+                false
+        );
+        return new EmployeeUserDetails(
+                "test@example.com",
+                "password",
+                true,
+                List.of(),
+                info
+        );
     }
 }
