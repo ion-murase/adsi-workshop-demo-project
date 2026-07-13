@@ -53,11 +53,10 @@ export function clockIn(employeeId: string, memo?: string): Promise<AttendanceRe
 }
 
 export function updateMemo(
-  employeeId: string,
   attendanceRecordId: string,
   memo: string,
 ): Promise<AttendanceRecordResponse> {
-  return apiClient.put<AttendanceRecordResponse>(`/api/attendance/memo?employeeId=${employeeId}`, {
+  return apiClient.put<AttendanceRecordResponse>("/api/attendance/memo", {
     attendanceRecordId,
     memo,
   });

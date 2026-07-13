@@ -23,12 +23,16 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.example.attendance.common.config.security.EmployeeUserDetails;
+import com.example.attendance.employee.entity.Role;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -164,11 +168,40 @@ class AttendanceControllerTest {
 
         // Act & Assert
         mockMvc.perform(put("/api/attendance/memo")
-                        .param("employeeId", EMPLOYEE_ID.toString())
+                        .with(user(createEmployeeUserDetails()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"attendanceRecordId\":\"" + recordId + "\",\"memo\":\"遅刻：電車遅延\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.memo").value("遅刻：電車遅延"));
+    }
+
+    @Test
+    @DisplayName("POST /api/attendance/clock-in 301文字メモは400を返す")
+    void clockIn_memoExceeds300Chars_returns400() throws Exception {
+        // Arrange
+        var longMemo = "あ".repeat(301);
+
+        // Act & Assert
+        mockMvc.perform(post("/api/attendance/clock-in")
+                        .param("employeeId", EMPLOYEE_ID.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"memo\":\"" + longMemo + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PUT /api/attendance/memo 301文字メモは400を返す")
+    void updateMemo_memoExceeds300Chars_returns400() throws Exception {
+        // Arrange
+        var recordId = UUID.randomUUID();
+        var longMemo = "あ".repeat(301);
+
+        // Act & Assert
+        mockMvc.perform(put("/api/attendance/memo")
+                        .with(user(createEmployeeUserDetails()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"attendanceRecordId\":\"" + recordId + "\",\"memo\":\"" + longMemo + "\"}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -195,5 +228,23 @@ class AttendanceControllerTest {
                 .andExpect(jsonPath("$.month").value("2025-01"))
                 .andExpect(jsonPath("$.days").isArray())
                 .andExpect(jsonPath("$.summary.workDays").value(1));
+    }
+
+    private EmployeeUserDetails createEmployeeUserDetails() {
+        var info = new EmployeeUserDetails.EmployeeInfo(
+                EMPLOYEE_ID,
+                "テスト社員",
+                UUID.randomUUID(),
+                "テスト部",
+                Role.EMPLOYEE,
+                false
+        );
+        return new EmployeeUserDetails(
+                "test@example.com",
+                "password",
+                true,
+                List.of(),
+                info
+        );
     }
 }

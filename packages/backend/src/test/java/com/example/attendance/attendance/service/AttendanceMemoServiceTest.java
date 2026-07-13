@@ -109,6 +109,22 @@ class AttendanceMemoServiceTest {
         }
 
         @Test
+        @DisplayName("300文字ちょうどのメモは正常に保存される")
+        void clockIn_memo300Chars_savesSuccessfully() {
+            // Arrange
+            when(employeeRepository.findById(employee.getId())).thenReturn(Optional.of(employee));
+            when(attendanceRepository.save(any(AttendanceRecord.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+            var memo300 = "あ".repeat(300);
+
+            // Act
+            var result = service.clockIn(employee.getId(), memo300);
+
+            // Assert
+            assertThat(result.memo()).isEqualTo(memo300);
+        }
+
+        @Test
         @DisplayName("300文字を超えるメモは拒否される")
         void clockIn_memoExceeds300Chars_throwsBadRequest() {
             // Arrange
@@ -191,6 +207,29 @@ class AttendanceMemoServiceTest {
             // Act & Assert
             assertThatThrownBy(() -> service.updateMemo(recordId, employee.getId(), "不正アクセス"))
                     .isInstanceOf(ResponseStatusException.class);
+        }
+
+        @Test
+        @DisplayName("300文字ちょうどのメモで更新が成功する")
+        void updateMemo_memo300Chars_updatesSuccessfully() {
+            // Arrange
+            var recordId = UUID.randomUUID();
+            var record = AttendanceRecord.builder()
+                    .id(recordId)
+                    .employee(employee)
+                    .workDate(TODAY_TOKYO)
+                    .clockIn(FIXED_INSTANT)
+                    .build();
+            when(attendanceRepository.findById(recordId)).thenReturn(Optional.of(record));
+            when(attendanceRepository.save(any(AttendanceRecord.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+            var memo300 = "あ".repeat(300);
+
+            // Act
+            var result = service.updateMemo(recordId, employee.getId(), memo300);
+
+            // Assert
+            assertThat(result.memo()).isEqualTo(memo300);
         }
 
         @Test

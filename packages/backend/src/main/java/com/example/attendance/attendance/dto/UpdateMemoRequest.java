@@ -7,6 +7,6 @@ import java.util.UUID;
 
 public record UpdateMemoRequest(
     @NotNull UUID attendanceRecordId,
-    @NotNull @Size(max = 300) String memo
+    @Size(max = 300) String memo
 ) {
 }

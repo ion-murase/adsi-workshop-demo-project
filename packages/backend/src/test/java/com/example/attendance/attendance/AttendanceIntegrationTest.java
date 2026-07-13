@@ -304,11 +304,10 @@ class AttendanceIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.records[0].memo").value("在宅勤務"));
 
-        // メモを更新
+        // メモを更新（認証済みセッションからemployeeIdを取得）
         mockMvc.perform(put("/api/attendance/memo")
                 .session(employeeSession)
                 .with(csrf())
-                .param("employeeId", employeeId.toString())
                 .contentType(APPLICATION_JSON)
                 .content("{\"attendanceRecordId\":\"%s\",\"memo\":\"在宅勤務（午後出社）\"}".formatted(recordId)))
             .andExpect(status().isOk())
@@ -336,11 +335,10 @@ class AttendanceIntegrationTest {
         var responseBody = clockInResult.getResponse().getContentAsString();
         var recordId = com.jayway.jsonpath.JsonPath.read(responseBody, "$.id").toString();
 
-        // マネージャーが他社員のメモを更新しようとする
+        // マネージャーが他社員のメモを更新しようとする（認証はmanagerSession）
         mockMvc.perform(put("/api/attendance/memo")
                 .session(managerSession)
                 .with(csrf())
-                .param("employeeId", managerId.toString())
                 .contentType(APPLICATION_JSON)
                 .content("{\"attendanceRecordId\":\"%s\",\"memo\":\"不正更新\"}".formatted(recordId)))
             .andExpect(status().isForbidden());

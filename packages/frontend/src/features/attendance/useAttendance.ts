@@ -66,12 +66,11 @@ export function useAttendanceHistory(month: string) {
 }
 
 export function useUpdateMemo() {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ recordId, memo }: { recordId: string; memo: string }) =>
-      updateMemo(user!.id, recordId, memo),
+      updateMemo(recordId, memo),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TODAY_STATUS_KEY });
       toast.success("メモを保存しました");
