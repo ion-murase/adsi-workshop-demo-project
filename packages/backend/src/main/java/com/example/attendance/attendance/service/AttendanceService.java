@@ -12,11 +12,15 @@ public interface AttendanceService {
 
     AttendanceRecordResponse clockIn(UUID employeeId);
 
+    AttendanceRecordResponse clockIn(UUID employeeId, String memo);
+
     AttendanceRecordResponse clockOut(UUID employeeId);
 
     TodayStatusResponse getTodayStatus(UUID employeeId);
 
     AttendanceHistoryResponse getHistory(UUID employeeId, String month);
+
+    AttendanceRecordResponse updateMemo(UUID recordId, UUID employeeId, String memo);
 
     List<TeamMemberSummaryResponse> getTeamAttendance(UUID managerId, String month);
 

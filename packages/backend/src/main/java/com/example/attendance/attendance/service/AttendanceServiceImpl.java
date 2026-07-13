@@ -51,6 +51,12 @@ public class AttendanceServiceImpl implements AttendanceService {
     @Override
     @Transactional
     public AttendanceRecordResponse clockIn(UUID employeeId) {
+        return clockIn(employeeId, null);
+    }
+
+    @Override
+    @Transactional
+    public AttendanceRecordResponse clockIn(UUID employeeId, String memo) {
         var employee = findEmployeeOrThrow(employeeId);
         var today = LocalDate.now(clock);
 
@@ -59,12 +65,15 @@ public class AttendanceServiceImpl implements AttendanceService {
                     throw new ResponseStatusException(HttpStatus.CONFLICT, "Already clocked in");
                 });
 
+        validateMemo(memo);
+
         var now = Instant.now(clock);
         var record = AttendanceRecord.builder()
                 .id(UuidCreator.getTimeOrderedEpoch())
                 .employee(employee)
                 .workDate(today)
                 .clockIn(now)
+                .memo(normalizeBlankMemo(memo))
                 .corrected(false)
                 .build();
 
@@ -224,6 +233,44 @@ public class AttendanceServiceImpl implements AttendanceService {
             date = date.plusDays(1);
         }
         return count;
+    }
+
+    @Override
+    @Transactional
+    public AttendanceRecordResponse updateMemo(UUID recordId, UUID employeeId, String memo) {
+        var record = attendanceRepository.findById(recordId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "AttendanceRecord with id '%s' was not found".formatted(recordId)));
+
+        if (!record.getEmployee().getId().equals(employeeId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot update another employee's memo");
+        }
+
+        var today = LocalDate.now(clock);
+        if (!record.getWorkDate().equals(today)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Memo can only be edited for today's record");
+        }
+
+        validateMemo(memo);
+        record.setMemo(normalizeBlankMemo(memo));
+
+        var saved = attendanceRepository.save(record);
+        log.info("Memo updated for record={} employee={}", recordId, employeeId);
+        return AttendanceRecordResponse.from(saved);
+    }
+
+    private void validateMemo(String memo) {
+        if (memo != null && memo.length() > 300) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Memo must not exceed 300 characters");
+        }
+    }
+
+    private String normalizeBlankMemo(String memo) {
+        if (memo == null || memo.isEmpty()) {
+            return null;
+        }
+        return memo;
     }
 
     private Employee findEmployeeOrThrow(UUID employeeId) {

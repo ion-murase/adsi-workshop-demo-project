@@ -26,6 +26,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -276,6 +277,72 @@ class AttendanceIntegrationTest {
         mockMvc.perform(get("/api/attendance/all")
                 .session(employeeSession)
                 .param("month", currentMonth))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("メモ付き出勤打刻→メモ更新→todayで確認の一連フロー")
+    void memoFlow_clockInWithMemo_updateMemo_verifyInToday() throws Exception {
+        // メモ付きで出勤
+        var clockInResult = mockMvc.perform(post("/api/attendance/clock-in")
+                .session(employeeSession)
+                .with(csrf())
+                .param("employeeId", employeeId.toString())
+                .contentType(APPLICATION_JSON)
+                .content("{\"memo\":\"在宅勤務\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.memo").value("在宅勤務"))
+            .andReturn();
+
+        var responseBody = clockInResult.getResponse().getContentAsString();
+        var recordId = com.jayway.jsonpath.JsonPath.read(responseBody, "$.id").toString();
+
+        // today で memo が含まれることを確認
+        mockMvc.perform(get("/api/attendance/today")
+                .session(employeeSession)
+                .param("employeeId", employeeId.toString()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.records[0].memo").value("在宅勤務"));
+
+        // メモを更新
+        mockMvc.perform(put("/api/attendance/memo")
+                .session(employeeSession)
+                .with(csrf())
+                .param("employeeId", employeeId.toString())
+                .contentType(APPLICATION_JSON)
+                .content("{\"attendanceRecordId\":\"%s\",\"memo\":\"在宅勤務（午後出社）\"}".formatted(recordId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.memo").value("在宅勤務（午後出社）"));
+
+        // today で更新されたメモを確認
+        mockMvc.perform(get("/api/attendance/today")
+                .session(employeeSession)
+                .param("employeeId", employeeId.toString()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.records[0].memo").value("在宅勤務（午後出社）"));
+    }
+
+    @Test
+    @DisplayName("他社員のメモを更新しようとすると403が返される")
+    void updateMemo_otherEmployeeRecord_returns403() throws Exception {
+        // 一般社員が出勤
+        var clockInResult = mockMvc.perform(post("/api/attendance/clock-in")
+                .session(employeeSession)
+                .with(csrf())
+                .param("employeeId", employeeId.toString()))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+        var responseBody = clockInResult.getResponse().getContentAsString();
+        var recordId = com.jayway.jsonpath.JsonPath.read(responseBody, "$.id").toString();
+
+        // マネージャーが他社員のメモを更新しようとする
+        mockMvc.perform(put("/api/attendance/memo")
+                .session(managerSession)
+                .with(csrf())
+                .param("employeeId", managerId.toString())
+                .contentType(APPLICATION_JSON)
+                .content("{\"attendanceRecordId\":\"%s\",\"memo\":\"不正更新\"}".formatted(recordId)))
             .andExpect(status().isForbidden());
     }
 

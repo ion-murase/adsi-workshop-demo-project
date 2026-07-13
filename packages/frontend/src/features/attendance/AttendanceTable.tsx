@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { type Column, DataTable } from "@/components/DataTable";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { DailyAttendanceResponse } from "./attendance-api";
 import { formatDate, formatMinutes, formatTime } from "./format";
+import { MemoModal } from "./MemoModal";
 
 function firstClockIn(day: DailyAttendanceResponse): string {
   const record = day.records[0];
@@ -17,6 +20,11 @@ function lastClockOut(day: DailyAttendanceResponse): string {
 
 function hasCorrected(day: DailyAttendanceResponse): boolean {
   return day.records.some((r) => r.corrected);
+}
+
+function getMemo(day: DailyAttendanceResponse): string | null {
+  const record = day.records.find((r) => r.memo);
+  return record?.memo ?? null;
 }
 
 const columns: Column<DailyAttendanceResponse>[] = [
@@ -62,12 +70,41 @@ interface AttendanceTableProps {
 }
 
 export function AttendanceTable({ days }: AttendanceTableProps) {
+  const [viewingMemo, setViewingMemo] = useState<string | null>(null);
+
+  const allColumns: Column<DailyAttendanceResponse>[] = [
+    ...columns,
+    {
+      key: "memo",
+      header: "備考",
+      render: (day) => {
+        const memo = getMemo(day);
+        if (!memo) return null;
+        return (
+          <Button variant="ghost" size="sm" onClick={() => setViewingMemo(memo)}>
+            備考
+          </Button>
+        );
+      },
+    },
+  ];
+
   return (
-    <DataTable<DailyAttendanceResponse & Record<string, unknown>>
-      columns={columns as Column<DailyAttendanceResponse & Record<string, unknown>>[]}
-      data={days as (DailyAttendanceResponse & Record<string, unknown>)[]}
-      rowKey={(item) => item.date}
-      emptyMessage="勤怠データがありません"
-    />
+    <>
+      <DataTable<DailyAttendanceResponse & Record<string, unknown>>
+        columns={allColumns as Column<DailyAttendanceResponse & Record<string, unknown>>[]}
+        data={days as (DailyAttendanceResponse & Record<string, unknown>)[]}
+        rowKey={(item) => item.date}
+        emptyMessage="勤怠データがありません"
+      />
+      <MemoModal
+        open={viewingMemo !== null}
+        onOpenChange={(open) => {
+          if (!open) setViewingMemo(null);
+        }}
+        memo={viewingMemo ?? ""}
+        editable={false}
+      />
+    </>
   );
 }

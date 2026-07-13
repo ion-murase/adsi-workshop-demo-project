@@ -1,12 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTime } from "./format";
-import { useTodayStatus } from "./useAttendance";
+import { MemoModal } from "./MemoModal";
+import { useTodayStatus, useUpdateMemo } from "./useAttendance";
 
 export function TodayRecords() {
   const { data: todayStatus, isLoading } = useTodayStatus();
+  const updateMemoMutation = useUpdateMemo();
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -44,11 +49,38 @@ export function TodayRecords() {
               <span className="font-medium">
                 {record.clockOut ? formatTime(record.clockOut) : "--:--"}
               </span>
+              {record.memo && (
+                <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                  {record.memo}
+                </span>
+              )}
             </div>
-            {record.corrected && <Badge variant="outline">修正済み</Badge>}
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setEditingRecordId(record.id)}>
+                {record.memo ? "備考" : "メモ追加"}
+              </Button>
+              {record.corrected && <Badge variant="outline">修正済み</Badge>}
+            </div>
           </div>
         ))}
       </div>
+      {editingRecordId && (
+        <MemoModal
+          open={!!editingRecordId}
+          onOpenChange={(open) => {
+            if (!open) setEditingRecordId(null);
+          }}
+          memo={records.find((r) => r.id === editingRecordId)?.memo ?? ""}
+          editable={true}
+          saving={updateMemoMutation.isPending}
+          onSave={(newMemo) => {
+            updateMemoMutation.mutate(
+              { recordId: editingRecordId, memo: newMemo },
+              { onSuccess: () => setEditingRecordId(null) },
+            );
+          }}
+        />
+      )}
     </div>
   );
 }
