@@ -63,6 +63,7 @@
 | workDate | LocalDate | NOT NULL | 勤務日 |
 | clockIn | Instant | NOT NULL | 出勤時刻 (UTC) |
 | clockOut | Instant | nullable | 退勤時刻 (UTC)。null = 出勤中 |
+| memo | String | nullable, max 300文字 | 打刻メモ（備考）。遅刻理由・在宅勤務等の補足情報 |
 | corrected | boolean | NOT NULL, default false | 修正申請で変更されたか |
 | version | Long | @Version | 楽観ロック |
 | createdAt | Instant | NOT NULL | |
@@ -74,6 +75,10 @@
 - `clockOut = null` のレコードがない場合、退勤打刻は不可（ATT-05）
 - 勤務時間計算: 各レコードの `(clockOut - clockIn)` を合算（CALC-01）
 - 休憩控除は合算勤務時間に対して適用（CALC-02）
+- メモは 1 日の打刻レコードに対して 1 つ、最大 300 文字（MEMO-01）
+- メモは任意入力。打刻時に同時保存、または打刻後に追記・編集可能（MEMO-02）
+- メモの編集は当日（workDate ベース）のみ可能（MEMO-03）
+- 管理者・上長はメモを閲覧できるが編集不可（MEMO-04）
 
 ### AttendanceCorrection（勤怠修正申請）
 
@@ -161,9 +166,10 @@ REJECTED  — 却下
     │  workDate          │◄─────────│  targetDate                  │
     │  clockIn           │          │  correctedClockIn            │
     │  clockOut          │          │  correctedClockOut           │
-    │  corrected         │          │  reason                      │
-    │                    │          │  status (enum)               │
-    └────────────────────┘          │  approver → Employee         │
+    │  memo              │          │  reason                      │
+    │  corrected         │          │  status (enum)               │
+    │                    │          │  approver → Employee         │
+    └────────────────────┘          │                              │
                                     └──────────────────────────────┘
 ```
 
