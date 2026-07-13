@@ -56,7 +56,12 @@ export function TodayRecords() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setEditingRecordId(record.id)}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-sky-600 border-sky-300 hover:bg-sky-50 hover:text-sky-700"
+                onClick={() => setEditingRecordId(record.id)}
+              >
                 {record.memo ? "備考" : "メモ追加"}
               </Button>
               {record.corrected && <Badge variant="outline">修正済み</Badge>}
