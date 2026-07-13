@@ -81,7 +81,12 @@ export function AttendanceTable({ days }: AttendanceTableProps) {
         const memo = getMemo(day);
         if (!memo) return null;
         return (
-          <Button variant="ghost" size="sm" onClick={() => setViewingMemo(memo)}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-sky-600 border-sky-300 hover:bg-sky-50 hover:text-sky-700"
+            onClick={() => setViewingMemo(memo)}
+          >
             備考
           </Button>
         );
